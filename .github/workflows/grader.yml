@@ -1,0 +1,129 @@
+name: Autograder intro.R requirements
+
+on:
+  push:
+  pull_request:
+
+env:
+  FILE: source-code/intro.R
+
+jobs:
+  file-location:
+    name: "1) File exists in the correct location/name"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required file exists
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          if [[ ! -f "${FILE}" ]]; then
+            echo "::error file=${FILE}::Missing required file: ${FILE}. Create the folder 'source-code' and put your file there with the exact name intro.R."
+            {
+              echo "## 📋 Autograder Feedback"
+              echo ""
+              echo "**File checked:** \`${FILE}\`"
+              echo ""
+              echo "- ❌ Required file missing or wrong location/name"
+              echo "- ℹ️ Other checks will be skipped until the file exists."
+              echo ""
+              echo "> ❗ Fix the ❌ item above, then push again."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          {
+            echo "## 📋 Autograder Feedback"
+            echo ""
+            echo "**File checked:** \`${FILE}\`"
+            echo ""
+            echo "- ✅ Required file exists in the correct location/name"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  first-line:
+    name: "2) First line is # LastName, FirstName"
+    runs-on: ubuntu-latest
+    needs: file-location
+    if: needs.file-location.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify first line
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          first_line="$(head -n 1 "${FILE}" | tr -d '\r')"
+
+          # Reject unchanged placeholder
+          if [[ "${first_line}" == "# LastName, FirstName" ]]; then
+            echo "::error file=${FILE}::Replace the placeholder with your actual name, e.g. # Smith, Jane"
+            {
+              echo "- ❌ First line is still the placeholder"
+              echo "  - Found: \`${first_line}\`"
+              echo "  - Example: \`# Smith, Jane\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          # Require: starts with "#", then LastName, then comma, then FirstName.
+          # Allows letters plus spaces/hyphen/apostrophe in each side.
+          regex='^#[[:space:]]*[A-Za-z][A-Za-z'"'"' -]*,[[:space:]]*[A-Za-z][A-Za-z'"'"' -]*[[:space:]]*$'
+
+          if [[ ! "${first_line}" =~ ${regex} ]]; then
+            echo "::error file=${FILE}::First line must be a comment in the format: # LastName, FirstName (example: # Smith, Jane)"
+            {
+              echo "- ❌ First line incorrect"
+              echo "  - Expected format: \`# LastName, FirstName\` (example: \`# Smith, Jane\`)"
+              echo "  - Found: \`${first_line}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "- ✅ First line matches format: \`# LastName, FirstName\`" >> "$GITHUB_STEP_SUMMARY"
+
+  rm-line:
+    name: "3) Contains rm(list = ls())"
+    runs-on: ubuntu-latest
+    needs: file-location
+    if: needs.file-location.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify rm(list = ls())
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          if ! grep -Eq 'rm\s*\(\s*list\s*=\s*ls\s*\(\s*\)\s*\)' "${FILE}"; then
+            echo "::error file=${FILE}::Missing required line: rm(list = ls()). Add it somewhere in intro.R."
+            echo "- ❌ Missing required line: \`rm(list = ls())\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "- ✅ Contains required line: \`rm(list = ls())\`" >> "$GITHUB_STEP_SUMMARY"
+
+  tidyverse-line:
+    name: "4) Contains library(tidyverse)"
+    runs-on: ubuntu-latest
+    needs: file-location
+    if: needs.file-location.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify library(tidyverse)
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          if ! grep -Eq 'library\s*\(\s*tidyverse\s*\)' "${FILE}"; then
+            echo "::error file=${FILE}::Missing required line: library(tidyverse). Add it somewhere in intro.R."
+            echo "- ❌ Missing required line: \`library(tidyverse)\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "- ✅ Contains required line: \`library(tidyverse)\`" >> "$GITHUB_STEP_SUMMARY"
+
+  
