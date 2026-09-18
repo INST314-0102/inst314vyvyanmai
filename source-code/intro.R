@@ -1,4 +1,6 @@
 # Mai, Vyvyan
+rm(list = ls())
+
 #installing package
 install.packages("tidyverse")
 #lib
@@ -50,3 +52,5 @@ propLiberal <- totalLiberal/grandTotal
 propLiberal
 
 percentLiberal <- 100*(totalLiberal/grandTotal)
+percentLiberal
+
